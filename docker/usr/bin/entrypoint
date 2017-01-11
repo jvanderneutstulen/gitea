@@ -51,11 +51,27 @@ EOF
     fi
 }
 
+map_uidgid() {
+	USERMAP_ORIG_UID=$(id -u git)
+	USERMAP_ORIG_GID=$(id -g git)
+	USERMAP_GID=${USERMAP_GID:-${USERMAP_UID:-$USERMAP_ORIG_GID}}
+	USERMAP_UID=${USERMAP_UID:-$USERMAP_ORIG_UID}
+	if [[ ${USERMAP_UID} != ${USERMAP_ORIG_UID} ]] || [[ ${USERMAP_GID} != ${USERMAP_ORIG_GID} ]]; then
+		echo "Mapping UID and GID for git:git to $USERMAP_UID:$USERMAP_GID"
+		#groupmod -g ${USERMAP_GID} git
+		sed -i -e "s|:${USERMAP_ORIG_GID}:|:${USERMAP_GID}:|" /etc/group
+		sed -i -e "s|:${USERMAP_ORIG_UID}:${USERMAP_ORIG_GID}:|:${USERMAP_UID}:${USERMAP_GID}:|" /etc/passwd
+		find /data -path /data/git/\* -prune -o -print0 | xargs -0 chown -h git:
+	fi
+}
+
+
 for FOLDER in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do
     mkdir -p ${FOLDER}
 done
 
 create_conf
+map_uidgid
 
 if [ $# -gt 0 ]; then
     exec "$@"
