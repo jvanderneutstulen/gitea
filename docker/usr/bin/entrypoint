@@ -1,5 +1,56 @@
 #!/bin/sh
 
+create_conf() {
+    if [ ! -e /data/gitea/conf/app.ini ]; then
+cat << EOF > /data/gitea/conf/app.ini
+APP_NAME = ${GITEA_APP_NAME:-DockerGitea}
+RUN_USER = ${GITEA_RUN_USER:-git}
+RUN_MODE = ${GITEA_RUN_MODE:-prod}
+
+[database]
+DB_TYPE  = ${GITEA_DB_TYPE:-sqlite3}
+HOST     = ${GITEA_DB_HOST:-127.0.0.1:5432}
+NAME     = ${GITEA_DB_NAME:-gitea}
+USER     = ${GITEA_DB_USER:-root}
+PASSWD   = ${GITEA_DB_PASSWORD}
+SSL_MODE = ${GITEA_DB_SSL_MODE:-disable}
+PATH     = ${GITEA_DB_PATH:-/data/gitea/gitea.db}
+
+[repository]
+ROOT = ${GITEA_ROOT:-/data/git/repositories}
+
+[server]
+DOMAIN       = ${GITEA_DOMAIN:-localhost}
+HTTP_PORT    = ${GITEA_HTTP_PORT:-3000}
+ROOT_URL     = ${GITEA_ROOT_URL:-http://localhost:3000/}
+DISABLE_SSH  = ${GITEA_DISABLE_SSH:-false}
+SSH_PORT     = ${GITEA_SSH_PORT:-22}
+OFFLINE_MODE = ${GITEA_OFFLINE_MODE:-false}
+
+[mailer]
+ENABLED = ${GITEA_MAILER:-false}
+
+[service]
+REGISTER_EMAIL_CONFIRM = ${GITEA_REGISTER_EMAIL_CONFIRM:-false}
+ENABLE_NOTIFY_MAIL     = ${GITEA_ENABLE_NOTIFY_MAIL:-false}
+DISABLE_REGISTRATION   = ${GITEA_DISABLE_REGISTRATION:-true}
+ENABLE_CAPTCHA         = ${GITEA_ENABLE_CAPTCHA:-false}
+REQUIRE_SIGNIN_VIEW    = ${GITEA_REQUIRE_SIGNIN_VIEW:-true}
+
+[picture]
+DISABLE_GRAVATAR = ${GITEA_DISABLE_GRAVATAR:-true}
+
+[session]
+PROVIDER = file
+
+[log]
+MODE      = file
+LEVEL     = Info
+ROOT_PATH = /app/gitea/log
+EOF
+    fi
+}
+
 ## Change GID for USER?
 if [ -n "${USER_GID}" ] && [ "${USER_GID}" != "`id -g ${USER}`" ]; then
     sed -i -e "s/^${USER}:\([^:]*\):[0-9]*/${USER}:\1:${USER_GID}/" /etc/group
@@ -14,6 +65,8 @@ fi
 for FOLDER in /data/gitea/conf /data/gitea/log /data/git /data/ssh; do
     mkdir -p ${FOLDER}
 done
+
+create_conf
 
 if [ $# -gt 0 ]; then
     exec "$@"
